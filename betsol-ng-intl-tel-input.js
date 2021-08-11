@@ -1,3 +1,10 @@
+/**
+ * betsol-ng-intl-tel-input - intl-tel-input integration for Angular.js
+ * @version v1.4.0
+ * @license MIT
+ *
+ * @author Milan Rukavina
+ */
 (function (angular) {
 
   'use strict';
@@ -8,7 +15,7 @@
 
     .constant('intlTelInputOptions', {})
 
-    .directive('intlTelInput', function (
+    .directive('intlTelInput', ['intlTelInputOptions', function (
       intlTelInputOptions
     ) {
       return {
@@ -20,18 +27,18 @@
         },
         link: function link ($scope, $element, attrs, modelCtrl) {
 
+          // Building options for this control.
+          var options = angular.extend({}, $scope.intlTelInputOptions || {}, intlTelInputOptions);
+
           /**
            * Obtaining reference to the plugin API
            * and making sure it's present.
            */
-          var pluginApi = $element.intlTelInput;
-          if (!pluginApi) {
-            log('intl-tel-input jQuery plugin must be loaded, skipping directive initialization');
-            return;
-          }
-
-          // Building options for this control.
-          var options = angular.extend({}, $scope.intlTelInputOptions || {}, intlTelInputOptions);
+           var pluginApi = window.intlTelInput($element[0], options);
+           if (!pluginApi) {
+             log('intl-tel-input jQuery plugin must be loaded, skipping directive initialization');
+             return;
+           }          
 
           // Using this flag in order to determine if we are in the control's rendering phase or not.
           // This is required for country change event right now.
@@ -41,15 +48,12 @@
           // This is required for country change event right now.
           var settingCountry = false;
 
-          // Initializing the control with the plugin.
-          callApi(options);
-
           /**
            * Updating the control's view when model changes.
            */
           modelCtrl.$render = function () {
             renderingView = true;
-            callApi('setNumber', modelCtrl.$viewValue || '');
+            pluginApi.setNumber(modelCtrl.$viewValue || '');
             renderingView = false;
           };
 
@@ -84,7 +88,7 @@
            * Destroying the plugin with the directive.
            */
           $scope.$on('$destroy', function () {
-            callApi('destroy');
+            pluginApi.destroy();
           });
 
           /**
@@ -97,7 +101,7 @@
            */
           var $setViewValue = modelCtrl.$setViewValue;
           modelCtrl.$setViewValue = function () {
-            arguments[0] = callApi('getNumber');
+            arguments[0] = pluginApi.getNumber();
             $setViewValue.apply(modelCtrl, arguments);
           };
 
@@ -121,13 +125,13 @@
 
           $scope.intlTelInputController.setCountry = function (countryName) {
             settingCountry = true;
-            callApi('setCountry', countryName);
+            pluginApi.setCountry(countryName);
             updateViewValue();
             settingCountry = false;
           };
 
           $scope.intlTelInputController.getExtension = function () {
-            return callApi('getExtension');
+            return pluginApi.getExtension();
           };
 
           $scope.intlTelInputController.getNumber = function () {
@@ -135,22 +139,17 @@
           };
 
           $scope.intlTelInputController.getNumberType = function () {
-            return callApi('getNumberType');
+            return pluginApi.getNumberType();
           };
 
           $scope.intlTelInputController.getSelectedCountryData = function () {
-            return callApi('getSelectedCountryData');
+            return pluginApi.getSelectedCountryData();
           };
-
-
-          function callApi () {
-            return pluginApi.apply($element, arguments);
-          }
 
           function callApiWithArguments (method, args) {
             var callArgs = Array.prototype.slice.call(args);
             callArgs.unshift(method);
-            return callApi.apply(null, callArgs);
+            return pluginApi[method].apply(pluginApi, callArgs);
           }
 
           function updateViewValue (trigger) {
@@ -173,7 +172,7 @@
               var previousValue = $element.val();
               $element.val(value);
             }
-            var result = callApi('isValidNumber');
+            var result = pluginApi.isValidNumber();
             if (useWorkaround) {
               $element.val(previousValue);
             }
@@ -182,7 +181,7 @@
 
         }
       };
-    })
+    }])
 
   ;
 
